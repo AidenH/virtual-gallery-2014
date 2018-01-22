@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+		<meta charset="utf-8">
+		<title>Virtual Gallery</title>
+		<link rel="stylesheet" type="text/css" href="stylesheet.css">
+	</head>
+
+	<body>
+		<script src="js/three.min.js"></script>
+		<script src="js/MTLLoader.js"></script>
+		<script src="js/OBJMTLLoader.js"></script>
+		<script src="js/PointerLockControls.js"></script>
+		<script src="js/Detector.js"></script>
+
+		<div id="blocker">
+			<div id="instructions">
+				Please Click.
+			</div>
+		</div>
+
+		<div id="main">
+
+			<div id="info">
+				Virtual Gallery<br> Feb. 2014<br> Aiden Holmans
+			</div>
+
+			<script>
+				var rotx = 0;
+				var controls, time = Date.now();
+				var ray, renderer;
+				var scene, camera;
+
+				var objects = [];
+
+				var blocker = document.getElementById( 'blocker' );
+				var instructions = document.getElementById( 'instructions' );
+
+				var havePointerLock = 'pointerLockElement' in document || 'mozPointerLockElement' in document || 'webkitPointerLockElement' in document;
+				if ( havePointerLock ) {
+
+					var element = document.body;
+
+					var pointerlockchange = function ( event ) {
+						if ( document.pointerLockElement === element || document.mozPointerLockElement === element || document.webkitPointerLockElement === element ) {
+							controls.enabled = true;
+							blocker.style.display = 'none';
+						}
+
+						else {
+							controls.enabled = false;
+
+							blocker.style.display = '-webkit-box';
+							blocker.style.display = '-moz-box';
+							blocker.style.display = 'box';
+
+							instructions.style.display = ' ';
+						}
+					}
+
+					var pointerlockerror = function ( event ) {
+						instructions.style.display = ' ';
+					}
+
+					document.addEventListener( 'pointerlockchange', pointerlockchange, false );
+					document.addEventListener( 'mozpointerlockchange', pointerlockchange, false );
+					document.addEventListener( 'webkitpointerlockchange', pointerlockchange, false );
+
+					document.addEventListener( 'pointerlockerror', pointerlockerror, false );
+					document.addEventListener( 'mozpointerlockerror', pointerlockerror, false );
+					document.addEventListener( 'webkitpointerlockerror', pointerlockerror, false );
+
+					instructions.addEventListener( 'click', function ( event ) {
+						instructions.style.display = 'none';
+						element.requestPointerLock = element.requestPointerLock || element.mozRequestPointerLock || element.webkitRequestPointerLock;
+						if ( /Firefox/i.test( navigator.userAgent ) ) {
+							var fullscreenchange = function ( event ) {
+								if ( document.fullscreenElement === element || document.mozFullscreenElement === element || document.mozFullScreenElement === element ) {
+									document.removeEventListener( 'fullscreenchange', fullscreenchange );
+									document.removeEventListener( 'mozfullscreenchange', fullscreenchange );
+
+									element.requestPointerLock();
+								}
+							}
+							document.addEventListener( 'fullscreenchange', fullscreenchange, false );
+							document.addEventListener( 'mozfullscreenchange', fullscreenchange, false );
+
+							element.requestFullscreen = element.requestFullscreen || element.mozRequestFullscreen || element.mozRequestFullScreen || element.webkitRequestFullscreen;
+							element.requestFullscreen();
+						}
+
+						else {
+							element.requestPointerLock();
+						}
+
+					}, false );
+				}
+
+				else {
+					instructions.innerHTML = 'Oops, your browser doesn\'t seem to support this API. <br> Please use <a href="http://www.mozilla.org/en-US/firefox/new/">Firefox</a> or <a href="https://www.google.com/intl/en_uk/chrome/browser/">Chrome</a>.';
+				}
+
+				init();
+				animate();
+
+				///////////////////////////
+
+
+				function init() {
+					scene = new THREE.Scene();
+					camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.01, 1000 );
+
+					controls = new THREE.PointerLockControls( camera );
+					scene.add( controls.getObject() );
+
+					renderer = new THREE.WebGLRenderer();
+					renderer.setClearColor( 0xffffff );
+					renderer.setSize( window.innerWidth, window.innerHeight );
+					document.body.appendChild( renderer.domElement );
+
+					var directionalLight = new THREE.DirectionalLight( 0xdddddd );
+					directionalLight.position.set( 1, 0, 1 ).normalize();
+					scene.add( directionalLight );
+
+					var directionalLight1 = new THREE.DirectionalLight( 0xdddddd );
+					directionalLight1.position.set( -2, 1, -2 ).normalize();
+					scene.add( directionalLight1 );
+
+					var directionalLight2 = new THREE.DirectionalLight( 0xdddddd );
+					directionalLight2.position.set( 0, -1, 0 ).normalize();
+					scene.add( directionalLight2 );
+
+					ray = new THREE.Raycaster();
+					ray.ray.direction.set( 0, 0, 0 );
+
+					var loader = new THREE.OBJMTLLoader();
+					loader.load( 'room.obj', 'room.mtl', function ( object ) {
+						object.position.set(0, -20, 0);
+						object.scale.set(20, 20, 20);
+						console.log(object.scale.x, object.scale.y);
+						objects.push( object );		// remove if necessary
+						scene.add( object );
+					} );
+
+					var ambient = new THREE.AmbientLight ( 0x777777 );
+					scene.add( ambient );
+
+				}
+
+				function animate() {
+					requestAnimationFrame( animate );
+
+					controls.isOnObject( false );
+
+					ray.ray.origin.copy( controls.getObject().position );
+					ray.ray.origin.y -= 10;
+
+					var intersections = ray.intersectObjects( objects ); 	//or camera
+
+					if ( intersections.length > 0 ) {
+
+						var distance = intersections[ 0 ].distance;
+
+						if ( distance > 0 && distance < 10 ) {
+
+							controls.isOnObject( true );
+
+						}
+
+					}
+
+					controls.update( Date.now() - time );
+
+					renderer.render( scene, camera );
+
+					time = Date.now();
+				}
+
+			</script>
+		</div>
+
+	</body>
+
+</html>
